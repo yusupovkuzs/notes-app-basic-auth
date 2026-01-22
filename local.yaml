@@ -1,0 +1,12 @@
+env: "local"
+
+postgres:
+  port: 5432
+  host: "localhost"
+  user: "postgres"
+  db_name: "notes"
+
+http_server:
+  address: "localhost:8082"
+  read_timeout: 10s
+  write_timeout: 10s
