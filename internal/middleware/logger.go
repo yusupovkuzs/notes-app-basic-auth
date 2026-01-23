@@ -4,40 +4,46 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
-
-	"github.com/go-chi/chi/v5/middleware"
 )
 
-func New(log *slog.Logger) func(next http.Handler) http.Handler {
+// [INFO] POST /users - 201 Created (15ms)
+// - метод
+// - путь
+// - статус
+// - время выполнения
+
+type statusResponseWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (w *statusResponseWriter) WriteHeader(code int) {
+	w.status = code
+	w.ResponseWriter.WriteHeader(code)
+}
+
+func RequestLogger(log *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
-		log := log.With(
-			slog.String("component", "middleware/logger"),
-		)
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			start := time.Now()
 
-		log.Info("logger middleware enabled")
+			sw := &statusResponseWriter{
+				ResponseWriter: w,
+				status:         http.StatusOK,
+			}
 
-		fn := func(w http.ResponseWriter, r *http.Request) {
-			entry := log.With(
-				slog.String("method", r.Method),
-				slog.String("path", r.URL.Path),
-				slog.String("remote_addr", r.RemoteAddr),
-				slog.String("user_agent", r.UserAgent()),
-				slog.String("request_id", middleware.GetReqID(r.Context())),
+			next.ServeHTTP(sw, r)
+
+			duration := time.Since(start)
+
+			log.Info(
+				r.Method+" "+r.URL.Path,
+				slog.Int("status", sw.status),
+				slog.String("status_text", http.StatusText(sw.status)),
+				slog.Duration("duration", duration),
 			)
-			ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
-
-			t1 := time.Now()
-			defer func() {
-				entry.Info("request completed",
-					slog.Int("status", ww.Status()),
-					slog.Int("bytes", ww.BytesWritten()),
-					slog.String("duration", time.Since(t1).String()),
-				)
-			}()
-
-			next.ServeHTTP(ww, r)
-		}
-
-		return http.HandlerFunc(fn)
+		})
 	}
 }
+
+// time=2026-01-23T16:39:51.598+03:00 level=INFO msg="POST /users" status=400 status_text="Bad Request" duration=25.7912ms

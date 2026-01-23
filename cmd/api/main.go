@@ -43,7 +43,7 @@ func main() {
 	// router
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)
-	router.Use(mw.New(log))
+	router.Use(mw.RequestLogger(log))
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
 
