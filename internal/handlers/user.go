@@ -96,8 +96,7 @@ func (h *Handlers) Register(log *slog.Logger) http.HandlerFunc {
 
 		log.Info("user created successfully", slog.Int("id", id))
 		response.RespondJSON(w, http.StatusCreated, map[string]interface{}{
-			"status": "OK",
-			"id":     id,
+			"id": id,
 		})
 	}
 }

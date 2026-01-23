@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -85,11 +84,6 @@ func (r *NoteRepoPostgres) GetAllNotes(userId, limit, offset int, sort string) (
 func (r *NoteRepoPostgres) GetNote(userId, noteId int) (models.Note, error) {
 	const op = "storage.postgres.GetNote"
 
-	err := r.validateId(userId, noteId)
-	if err != nil {
-		return models.Note{}, err
-	}
-
 	var n models.Note
 	n.ID = noteId
 
@@ -99,7 +93,7 @@ func (r *NoteRepoPostgres) GetNote(userId, noteId int) (models.Note, error) {
 	)
 
 	row := r.db.QueryRow(query, noteId)
-	if err = row.Scan(&n.UserID, &n.Title, &n.Content, &n.CreatedAt, &n.UpdatedAt); err != nil {
+	if err := row.Scan(&n.UserID, &n.Title, &n.Content, &n.CreatedAt, &n.UpdatedAt); err != nil {
 		return models.Note{}, fmt.Errorf("%s: %w", op, err)
 	}
 	if n.UserID != userId {
@@ -111,11 +105,6 @@ func (r *NoteRepoPostgres) GetNote(userId, noteId int) (models.Note, error) {
 
 func (r *NoteRepoPostgres) UpdateNote(userId, noteId int, note models.UpdateNoteInput) error {
 	const op = "storage.postgres.UpdateNote"
-
-	err := r.validateId(userId, noteId)
-	if err != nil {
-		return err
-	}
 
 	setValues := make([]string, 0)
 	args := make([]interface{}, 0)
@@ -148,7 +137,7 @@ func (r *NoteRepoPostgres) UpdateNote(userId, noteId int, note models.UpdateNote
 	)
 
 	args = append(args, noteId, userId)
-	_, err = r.db.Exec(query, args...)
+	_, err := r.db.Exec(query, args...)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
@@ -159,37 +148,14 @@ func (r *NoteRepoPostgres) UpdateNote(userId, noteId int, note models.UpdateNote
 func (r *NoteRepoPostgres) DeleteNote(userId, noteId int) error {
 	const op = "storage.postgres.Delete"
 
-	err := r.validateId(userId, noteId)
-	if err != nil {
-		return err
-	}
-
 	query := fmt.Sprintf(
 		"DELETE FROM %s WHERE id = $1 AND user_id = $2 RETURNING id",
 		storage.NotesTable,
 	)
 	var deletedID int
-	err = r.db.QueryRow(query, noteId, userId).Scan(&deletedID)
+	err := r.db.QueryRow(query, noteId, userId).Scan(&deletedID)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
-	}
-
-	return nil
-}
-
-// check access and exist
-func (r *NoteRepoPostgres) validateId(userId, noteId int) error {
-	var ownerID int
-	err := r.db.QueryRow(
-		"SELECT user_id FROM notes WHERE id = $1",
-		noteId,
-	).Scan(&ownerID)
-
-	if errors.Is(err, sql.ErrNoRows) {
-		return sql.ErrNoRows
-	}
-	if ownerID != userId {
-		return storage.ErrAccessDenied
 	}
 
 	return nil

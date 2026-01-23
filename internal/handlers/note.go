@@ -41,6 +41,7 @@ func (h *Handlers) CreateNote(log *slog.Logger) http.HandlerFunc {
 			response.RespondError(w, http.StatusBadRequest, err.Error())
 			return
 		}
+		log.Info("user id found", slog.Int("userId", userId))
 
 		input.UserID = userId
 		id, err := h.noteRepo.CreateNote(input)
@@ -52,9 +53,9 @@ func (h *Handlers) CreateNote(log *slog.Logger) http.HandlerFunc {
 
 		log.Info("note created successfully", slog.Int("id", id))
 		response.RespondJSON(w, http.StatusCreated, map[string]interface{}{
-			"status": "OK",
 			"userId": userId,
 			"noteId": id,
+			"note":   input,
 		})
 	}
 }
@@ -105,7 +106,6 @@ func (h *Handlers) GetAllNotes(log *slog.Logger) http.HandlerFunc {
 
 		log.Info("notes found", slog.Any("notes", notes))
 		response.RespondJSON(w, http.StatusOK, map[string]interface{}{
-			"status": "OK",
 			"userID": userId,
 			"notes":  notes,
 		})
@@ -163,7 +163,6 @@ func (h *Handlers) GetNote(log *slog.Logger) http.HandlerFunc {
 
 		log.Info("note found", slog.Any("note", note))
 		response.RespondJSON(w, http.StatusOK, map[string]interface{}{
-			"status": "OK",
 			"userID": userId,
 			"note":   note,
 		})
@@ -229,7 +228,6 @@ func (h *Handlers) UpdateNote(log *slog.Logger) http.HandlerFunc {
 
 		log.Info("note updated", slog.Any("note", input))
 		response.RespondJSON(w, http.StatusOK, map[string]interface{}{
-			"status": "OK",
 			"userID": userId,
 			"noteID": noteID,
 		})
@@ -286,7 +284,6 @@ func (h *Handlers) DeleteNote(log *slog.Logger) http.HandlerFunc {
 
 		log.Info("note deleted", slog.Any("note", noteId))
 		response.RespondJSON(w, http.StatusOK, map[string]interface{}{
-			"status": "OK",
 			"userID": userId,
 			"noteID": noteID,
 		})
